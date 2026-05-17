@@ -1,0 +1,31 @@
+server:
+  host: "127.0.0.1"
+  port: 8082
+
+backend:
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  api_key: "xxx"
+
+model_mapping:
+  claude-sonnet: "qwen-plus"
+  claude-opus: "qwen-plus"
+  claude-haiku: "qwen-plus"
+  "*": "qwen-plus"
+
+model_capabilities:
+  qwen-plus:
+    supports_thinking: false
+    supports_vision: false
+    max_tokens: 4096
+  # qwen-plus-plus:
+  #   supports_thinking: false
+  #   supports_vision: true
+  #   max_tokens: 4096
+
+parameters:
+  temperature: 0.7
+
+logging:
+  level: "debug"
+  log_requests: true
+  log_responses: true
