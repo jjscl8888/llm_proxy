@@ -17,10 +17,12 @@ model_capabilities:
     supports_thinking: false
     supports_vision: false
     max_tokens: 4096
+    fixed_temperature: 1
   # qwen-plus-plus:
   #   supports_thinking: false
   #   supports_vision: true
   #   max_tokens: 4096
+  #   fixed_temperature: 1
 
 parameters:
   temperature: 0.7

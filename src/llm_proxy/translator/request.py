@@ -75,4 +75,9 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
         if key in config.parameters:
             openai_req[key] = config.parameters[key]
 
+    backend_model = openai_req["model"]
+    capability = config.get_model_capability(backend_model)
+    if capability.fixed_temperature is not None:
+        openai_req["temperature"] = capability.fixed_temperature
+
     return openai_req

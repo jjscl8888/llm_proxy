@@ -13,6 +13,7 @@ class ModelCapability(BaseModel):
     thinking_field: str = ""
     supports_vision: bool = False
     max_tokens: int = 8192
+    fixed_temperature: Optional[float] = None
 
 
 class ServerConfig(BaseModel):

@@ -1,0 +1,4 @@
+修改代码需要在配置文件中model_capabilities支持 temperature 为下面这种情况，
+
+API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"invalid temperature: only 1 is
+     allowed for this model"}} 
