@@ -411,7 +411,7 @@ class TestStreamConverter:
         assert "message_stop" in result4
 
     def test_thinking_stream(self):
-        converter = StreamConverter("claude-sonnet-4-20250514", input_tokens=10)
+        converter = StreamConverter("claude-sonnet-4-20250514", input_tokens=10, thinking_field="reasoning_content")
 
         chunk1 = {
             "id": "chatcmpl-1",

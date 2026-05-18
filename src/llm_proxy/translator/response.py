@@ -12,12 +12,17 @@ STOP_REASON_MAP = {
 
 
 def translate_response(
-    openai_resp: dict, original_model: str
+    openai_resp: dict, original_model: str, thinking_field: str = ""
 ) -> dict:
     choice = openai_resp["choices"][0]
     message = choice.get("message", {})
 
     content_blocks: list[dict] = []
+
+    if thinking_field and message.get(thinking_field):
+        content_blocks.append(
+            {"type": "thinking", "thinking": message[thinking_field]}
+        )
 
     if message.get("content"):
         content_blocks.append(

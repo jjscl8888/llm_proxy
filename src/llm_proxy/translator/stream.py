@@ -6,7 +6,7 @@ from typing import AsyncIterator
 
 
 class StreamConverter:
-    def __init__(self, original_model: str, input_tokens: int = 0):
+    def __init__(self, original_model: str, input_tokens: int = 0, thinking_field: str = ""):
         self.model = original_model
         self.input_tokens = input_tokens
         self.output_tokens = 0
@@ -16,6 +16,7 @@ class StreamConverter:
         self.msg_id = f"msg_{uuid.uuid4().hex[:24]}"
         self._tool_call_buffers: dict[int, dict] = {}
         self._finished = False
+        self.thinking_field = thinking_field
 
     def _sse_event(self, event_type: str, data: dict) -> str:
         return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
@@ -106,7 +107,7 @@ class StreamConverter:
             events.append(self._ping())
             self.started = True
 
-        if delta.get("reasoning_content"):
+        if self.thinking_field and delta.get(self.thinking_field):
             if self.current_block_type != "thinking":
                 if self.current_block_type is not None:
                     events.append(self._content_block_stop())
@@ -120,7 +121,7 @@ class StreamConverter:
                 self._content_block_delta(
                     {
                         "type": "thinking_delta",
-                        "thinking": delta["reasoning_content"],
+                        "thinking": delta[self.thinking_field],
                     }
                 )
             )
@@ -201,9 +202,9 @@ class StreamConverter:
 
 
 async def convert_stream(
-    stream: AsyncIterator[bytes], original_model: str, input_tokens: int = 0
+    stream: AsyncIterator[bytes], original_model: str, input_tokens: int = 0, thinking_field: str = ""
 ) -> AsyncIterator[str]:
-    converter = StreamConverter(original_model, input_tokens)
+    converter = StreamConverter(original_model, input_tokens, thinking_field)
     buffer = ""
 
     async for chunk_bytes in stream:

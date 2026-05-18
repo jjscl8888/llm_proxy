@@ -53,6 +53,9 @@ async def messages(request: Request):
 
     openai_req = translate_request(body, config)
     is_stream = openai_req.get("stream", False)
+    backend_model = openai_req.get("model", "")
+    capability = config.get_model_capability(backend_model)
+    thinking_field = capability.thinking_field if capability.supports_thinking else ""
 
     backend_url = get_backend_url(config)
     url = f"{backend_url}/chat/completions"
@@ -64,12 +67,12 @@ async def messages(request: Request):
     }
 
     if is_stream:
-        return await _handle_stream(url, req_headers, openai_req, original_model, start)
+        return await _handle_stream(url, req_headers, openai_req, original_model, thinking_field, start)
     else:
-        return await _handle_non_stream(url, req_headers, openai_req, original_model, start)
+        return await _handle_non_stream(url, req_headers, openai_req, original_model, thinking_field, start)
 
 
-async def _handle_stream(url, headers, openai_req, original_model, start):
+async def _handle_stream(url, headers, openai_req, original_model, thinking_field, start):
     try:
         assert http_client is not None
         req = http_client.build_request(
@@ -87,7 +90,7 @@ async def _handle_stream(url, headers, openai_req, original_model, start):
         async def generate():
             try:
                 async for chunk in convert_stream(
-                    resp.aiter_bytes(), original_model, input_tokens
+                    resp.aiter_bytes(), original_model, input_tokens, thinking_field
                 ):
                     yield chunk
             except Exception as e:
@@ -126,7 +129,7 @@ async def _handle_stream(url, headers, openai_req, original_model, start):
         )
 
 
-async def _handle_non_stream(url, headers, openai_req, original_model, start):
+async def _handle_non_stream(url, headers, openai_req, original_model, thinking_field, start):
     try:
         assert http_client is not None
         resp = await http_client.post(url, json=openai_req, headers=headers)
@@ -135,7 +138,7 @@ async def _handle_non_stream(url, headers, openai_req, original_model, start):
             return _translate_error(resp.status_code, resp.content)
 
         openai_resp = resp.json()
-        anthropic_resp = translate_response(openai_resp, original_model)
+        anthropic_resp = translate_response(openai_resp, original_model, thinking_field)
 
         if config.logging.log_responses:
             logger.info(

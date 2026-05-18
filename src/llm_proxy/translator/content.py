@@ -58,12 +58,13 @@ def extract_text(content: Union[str, list]) -> str:
     return "\n".join(texts)
 
 
-def translate_assistant_content(content: Union[str, list]) -> dict:
+def translate_assistant_content(content: Union[str, list], thinking_field: str = "") -> dict:
     if isinstance(content, str):
         return {"role": "assistant", "content": content}
 
     text_parts: list[str] = []
     tool_calls: list[dict] = []
+    reasoning_parts: list[str] = []
 
     for block in content:
         block_type = block.get("type", "text")
@@ -84,9 +85,15 @@ def translate_assistant_content(content: Union[str, list]) -> dict:
             )
 
         elif block_type == "thinking":
-            pass
+            if thinking_field:
+                thinking_text = block.get("thinking", "")
+                if thinking_text:
+                    reasoning_parts.append(thinking_text)
 
     msg: dict = {"role": "assistant"}
+    if reasoning_parts:
+        msg[thinking_field] = "\n".join(reasoning_parts)
+
     if text_parts:
         msg["content"] = "\n".join(text_parts)
     else:

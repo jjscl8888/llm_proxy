@@ -13,9 +13,12 @@ from llm_proxy.translator.tools import translate_tool_choice, translate_tools
 def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
     openai_req: dict = {}
 
-    openai_req["model"] = config.map_model(
+    backend_model = config.map_model(
         anthropic_req.get("model", "claude-sonnet-4-20250514")
     )
+    openai_req["model"] = backend_model
+    capability = config.get_model_capability(backend_model)
+    thinking_field = capability.thinking_field if capability.supports_thinking else ""
 
     messages: list[dict] = []
 
@@ -44,7 +47,7 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
                 )
 
         elif role == "assistant":
-            openai_msg = translate_assistant_content(content)
+            openai_msg = translate_assistant_content(content, thinking_field)
             messages.append(openai_msg)
 
     openai_req["messages"] = messages
@@ -75,8 +78,6 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
         if key in config.parameters:
             openai_req[key] = config.parameters[key]
 
-    backend_model = openai_req["model"]
-    capability = config.get_model_capability(backend_model)
     if capability.fixed_temperature is not None:
         openai_req["temperature"] = capability.fixed_temperature
 
