@@ -205,15 +205,16 @@ async def convert_stream(
     stream: AsyncIterator[bytes], original_model: str, input_tokens: int = 0, thinking_field: str = ""
 ) -> AsyncIterator[str]:
     converter = StreamConverter(original_model, input_tokens, thinking_field)
-    buffer = ""
+    byte_buf = b""
 
     async for chunk_bytes in stream:
-        chunk_text = chunk_bytes.decode("utf-8") if isinstance(chunk_bytes, bytes) else chunk_bytes
-        buffer += chunk_text
+        if isinstance(chunk_bytes, str):
+            chunk_bytes = chunk_bytes.encode("utf-8")
+        byte_buf += chunk_bytes
 
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            line = line.strip()
+        while b"\n" in byte_buf:
+            line_bytes, byte_buf = byte_buf.split(b"\n", 1)
+            line = line_bytes.decode("utf-8").strip()
 
             if not line:
                 continue

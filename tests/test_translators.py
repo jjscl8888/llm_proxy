@@ -9,7 +9,7 @@ from llm_proxy.translator.content import (
 )
 from llm_proxy.translator.request import translate_request
 from llm_proxy.translator.response import translate_response
-from llm_proxy.translator.stream import StreamConverter
+from llm_proxy.translator.stream import StreamConverter, convert_stream
 from llm_proxy.translator.tools import translate_tool_choice, translate_tools
 
 
@@ -304,6 +304,35 @@ class TestTranslateRequest:
         result = translate_request(anthropic_req, self.config)
         assert result["stop"] == ["END", "STOP"]
 
+    def test_ignore_fields_removes_temperature(self):
+        from llm_proxy.config import ModelCapability
+
+        config = ProxyConfig(
+            backend=ProxyConfig.__fields__["backend"].default.__class__(
+                base_url="https://api.anthropic.com",
+                api_key="sk-test",
+            ),
+            model_mapping={"claude-opus-4-7": "claude-opus-4-7"},
+            model_capabilities={
+                "claude-opus-4-7": ModelCapability(
+                    supports_thinking=True,
+                    thinking_field="thinking",
+                    supports_vision=True,
+                    max_tokens=8192,
+                    ignore_fields=["temperature"],
+                ),
+            },
+            parameters={"temperature": 0.7},
+        )
+        anthropic_req = {
+            "model": "claude-opus-4-7",
+            "max_tokens": 1024,
+            "temperature": 0.5,
+            "messages": [{"role": "user", "content": "Hi"}],
+        }
+        result = translate_request(anthropic_req, config)
+        assert "temperature" not in result
+
 
 class TestTranslateResponse:
     def test_basic_response(self):
@@ -495,6 +524,63 @@ class TestStreamConverter:
 
         result4 = converter.convert_chunk(chunk4)
         assert "message_stop" in result4
+
+
+class TestConvertStreamMultibyte:
+    @pytest.mark.asyncio
+    async def test_multibyte_utf8_split_across_chunks(self):
+        """Simulate a stream chunk that splits a multi-byte UTF-8 char (e.g. Chinese)."""
+        import json
+
+        chinese_text = "你好世界"
+        chunk_data = {
+            "id": "chatcmpl-1",
+            "choices": [{"delta": {"content": chinese_text}, "finish_reason": None}],
+        }
+        line = f"data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n"
+        full_bytes = line.encode("utf-8")
+
+        # Find a multi-byte UTF-8 lead byte (0xe4 for 你) and split mid-character
+        lead_byte = "你".encode("utf-8")[0]  # 0xe4
+        pos = full_bytes.index(lead_byte)
+        first_chunk = full_bytes[: pos + 1]  # only the first byte of the 3-byte char
+        second_chunk = full_bytes[pos + 1 :]
+
+        async def fake_stream():
+            yield first_chunk
+            yield second_chunk
+
+        results = []
+        async for event in convert_stream(fake_stream(), "claude-sonnet-4-20250514", input_tokens=10):
+            results.append(event)
+
+        combined = "".join(results)
+        assert chinese_text in combined
+
+    @pytest.mark.asyncio
+    async def test_normal_stream_not_broken(self):
+        """Verify normal (non-split) stream still works."""
+        import json
+
+        chunk_data = {
+            "id": "chatcmpl-1",
+            "choices": [{"delta": {"content": "Hello"}, "finish_reason": None}],
+        }
+        done_data = {"id": "chatcmpl-1", "choices": [{"delta": {}, "finish_reason": "stop"}]}
+
+        lines = f"data: {json.dumps(chunk_data)}\n\ndata: {json.dumps(done_data)}\n\n"
+        full_bytes = lines.encode("utf-8")
+
+        async def fake_stream():
+            yield full_bytes
+
+        results = []
+        async for event in convert_stream(fake_stream(), "claude-sonnet-4-20250514", input_tokens=10):
+            results.append(event)
+
+        combined = "".join(results)
+        assert "Hello" in combined
+        assert "message_stop" in combined
 
 
 class TestConfig:

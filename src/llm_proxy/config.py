@@ -14,6 +14,7 @@ class ModelCapability(BaseModel):
     supports_vision: bool = False
     max_tokens: int = 8192
     fixed_temperature: Optional[float] = None
+    ignore_fields: list[str] = Field(default_factory=list)
 
 
 class ServerConfig(BaseModel):

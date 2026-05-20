@@ -81,4 +81,7 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
     if capability.fixed_temperature is not None:
         openai_req["temperature"] = capability.fixed_temperature
 
+    for field in capability.ignore_fields:
+        openai_req.pop(field, None)
+
     return openai_req
