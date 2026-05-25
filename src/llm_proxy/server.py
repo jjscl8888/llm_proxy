@@ -171,25 +171,25 @@ async def _handle_non_stream(url, headers, openai_req, original_model, thinking_
 
 @app.get("/v1/models")
 async def models(request: Request):
-    backend_url = get_backend_url(config)
-    url = f"{backend_url}/models"
-    auth_headers = translate_auth(dict(request.headers), config)
+    from datetime import datetime, timezone
 
-    try:
-        assert http_client is not None
-        resp = await http_client.get(url, headers=auth_headers)
-        return JSONResponse(content=resp.json(), status_code=resp.status_code)
-    except httpx.ConnectError as e:
-        return JSONResponse(
-            status_code=502,
-            content={
-                "type": "error",
-                "error": {
-                    "type": "proxy_error",
-                    "message": f"Failed to connect to backend: {e}",
-                },
-            },
-        )
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    data = []
+    for key, value in config.model_mapping.items():
+        if key == "*":
+            continue
+        data.append({
+            "type": "model",
+            "id": key,
+            "display_name": value,
+            "created_at": now,
+        })
+    return JSONResponse(content={
+        "data": data,
+        "has_more": False,
+        "first_id": data[0]["id"] if data else "",
+        "last_id": data[-1]["id"] if data else "",
+    })
 
 
 @app.get("/health")
