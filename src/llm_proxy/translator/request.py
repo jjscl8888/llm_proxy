@@ -19,6 +19,7 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
     openai_req["model"] = backend_model
     capability = config.get_model_capability(backend_model)
     thinking_field = capability.thinking_field if capability.supports_thinking else ""
+    flatten = capability.flatten_content
 
     messages: list[dict] = []
 
@@ -38,12 +39,12 @@ def translate_request(anthropic_req: dict, config: ProxyConfig) -> dict:
 
             if tool_results:
                 messages.extend(tool_results)
-                text_content = translate_content(content)
+                text_content = translate_content(content, flatten=flatten)
                 if text_content:
                     messages.append({"role": "user", "content": text_content})
             else:
                 messages.append(
-                    {"role": "user", "content": translate_content(content)}
+                    {"role": "user", "content": translate_content(content, flatten=flatten)}
                 )
 
         elif role == "assistant":

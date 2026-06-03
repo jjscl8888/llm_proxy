@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 
-def translate_content(content: Union[str, list]) -> Union[str, list]:
+def translate_content(content: Union[str, list], flatten: bool = False) -> Union[str, list]:
     if isinstance(content, str):
         return content
 
@@ -39,6 +39,10 @@ def translate_content(content: Union[str, list]) -> Union[str, list]:
 
         elif block_type == "thinking":
             continue
+
+    if flatten:
+        text_parts = [p["text"] for p in parts if p["type"] == "text"]
+        return "\n".join(text_parts)
 
     if len(parts) == 1 and parts[0]["type"] == "text":
         return parts[0]["text"]

@@ -15,6 +15,7 @@ class ModelCapability(BaseModel):
     max_tokens: int = 8192
     fixed_temperature: Optional[float] = None
     ignore_fields: list[str] = Field(default_factory=list)
+    flatten_content: bool = False
 
 
 class ServerConfig(BaseModel):
